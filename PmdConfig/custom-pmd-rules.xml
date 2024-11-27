@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="Custom PMD Ruleset for Banking Project"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Reglas personalizadas enfocadas en:
+        - Seguridad (evitando vulnerabilidades de seguridad en el código)
+        - Rendimiento (optimizando el uso de recursos)
+        - Calidad de código (manteniendo estándares de legibilidad y mantenimiento)
+        - Convenciones de nombres (para consistencia en el proyecto)
+    </description>
+
+    <!-- Reglas básicas -->
+    <rule ref="rulesets/java/basic.xml/AvoidDuplicateLiterals">
+        <description>Evita el uso de literales duplicados para reducir errores de mantenimiento y mejorar la legibilidad.</description>
+    </rule>
+    <rule ref="rulesets/java/basic.xml/EmptyCatchBlock">
+        <description>Evita bloques catch vacíos que pueden ocultar errores.</description>
+    </rule>
+    <rule ref="rulesets/java/basic.xml/EmptyIfStmt">
+        <description>Evita sentencias if vacías que pueden ser confusas.</description>
+    </rule>
+
+    <!-- Reglas de uso de llaves -->
+    <rule ref="rulesets/java/braces.xml/IfStmtsMustUseBraces">
+        <description>Asegura el uso de llaves en las sentencias if para mejorar la legibilidad y evitar errores lógicos.</description>
+    </rule>
+    <rule ref="rulesets/java/braces.xml/WhileLoopsMustUseBraces">
+        <description>Asegura el uso de llaves en los bucles while para mejorar la claridad del código.</description>
+    </rule>
+    <rule ref="rulesets/java/braces.xml/ForLoopsMustUseBraces">
+        <description>Asegura el uso de llaves en los bucles for para reducir errores de ejecución.</description>
+    </rule>
+    <rule ref="rulesets/java/braces.xml/MissingSwitchDefault">
+        <description>Valida que los switch incluyan una opción por defecto.</description>
+        <priority>0</priority>
+    </rule>
+
+    <!-- Reglas de tamaño de código -->
+    <rule ref="rulesets/java/codesize.xml/ExcessiveMethodLength">
+        <description>Limita la longitud de los métodos para mejorar la legibilidad y el mantenimiento del código.</description>
+    </rule>
+    <rule ref="rulesets/java/codesize.xml/ExcessiveClassLength">
+        <description>Limita la longitud de las clases para facilitar la modularidad y el mantenimiento.</description>
+    </rule>
+    <rule ref="rulesets/java/codesize.xml/NcssMethodCount">
+        <description>Restringe la complejidad de los métodos, manteniendo un número manejable de sentencias por método.</description>
+    </rule>
+    <rule ref="rulesets/java/codesize.xml/NcssTypeCount">
+        <description>Restringe la complejidad de las clases, manteniendo un número manejable de sentencias por clase.</description>
+        <priority>0</priority>
+    </rule>
+    <rule ref="rulesets/java/codesize.xml/TooManyFields">
+        <description>Limita el número de campos en una clase para mejorar la claridad y el mantenimiento.</description>
+        <priority>0</priority>
+    </rule>
+
+    <!-- Reglas de nombres -->
+    <rule ref="rulesets/java/naming.xml/VariableNamingConventions">
+        <description>Asegura el uso de convenciones en el nombrado de variables para una mejor consistencia.</description>
+    </rule>
+    <rule ref="rulesets/java/naming.xml/MethodNamingConventions">
+        <description>Asegura el uso de convenciones en el nombrado de métodos para mejorar la legibilidad.</description>
+    </rule>
+    <rule ref="rulesets/java/naming.xml/ClassNamingConventions">
+        <description>Impone convenciones de nombres en clases para consistencia y claridad en el proyecto.</description>
+    </rule>
+    <rule ref="rulesets/java/naming.xml/FieldNamingConventions">
+        <description>Asegura que los nombres de los campos sigan una convención consistente.</description>
+    </rule>
+    <rule ref="rulesets/java/naming.xml/ConstructorWithNameAsClass">
+        <description>Evita que los constructores tengan el mismo nombre que la clase.</description>
+        <priority>0</priority>
+    </rule>
+
+    <!-- Reglas de seguridad -->
+    <rule ref="rulesets/java/security.xml/InsecureCryptoUsage">
+        <description>Detecta el uso inseguro de criptografía para prevenir vulnerabilidades.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/HardCodedCryptoKey">
+        <description>Evita el uso de claves de criptografía embebidas en el código, mejorando la seguridad.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/AvoidUsingHardCodedIP">
+        <description>Evita el uso de direcciones IP hardcodeadas, lo que permite mayor flexibilidad y seguridad.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/AvoidUsingOctalValues">
+        <description>Evita el uso de valores octales, ya que pueden ser interpretados incorrectamente.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/GuardLogStatement">
+        <description>Previene el registro de información confidencial, mejorando la privacidad y seguridad de los datos.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/AvoidCatchingThrowable">
+        <description>Evita capturar Throwable, lo que puede ocultar errores críticos.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/AvoidUsingNativeCode">
+        <description>Evita el uso de código nativo, mejorando la portabilidad y seguridad.</description>
+    </rule>
+    <rule ref="rulesets/java/security.xml/UseSecureRandom">
+        <description>Promueve el uso de SecureRandom en lugar de Random para mejorar la seguridad.</description>
+    </rule>
+
+    <!-- Reglas de diseño -->
+    <rule ref="rulesets/java/design.xml/SimplifyBooleanReturns">
+        <description>Promueve la simplicidad en los retornos booleanos, mejorando la claridad.</description>
+    </rule>
+    <rule ref="rulesets/java/design.xml/DataClass">
+        <description>Detecta clases que solo contienen datos y sin lógica, promoviendo mejores prácticas de diseño.</description>
+    </rule>
+    <rule ref="rulesets/java/design.xml/LawOfDemeter">
+        <description>Fomenta la modularidad al restringir la cantidad de niveles en una llamada de métodos.</description>
+    </rule>
+    <rule ref="rulesets/java/design.xml/TooManyMethods">
+        <description>Limita el número de métodos en una clase para mejorar la claridad y el mantenimiento.</description>
+        <priority>0</priority>
+    </rule>
+    <rule ref="rulesets/java/design.xml/UseSingleton">
+        <description>Promueve el uso del patrón Singleton para clases que deben tener una única instancia.</description>
+    </rule>
+    <rule ref="rulesets/java/design.xml/UseInterfaceForType">
+        <description>Promueve el uso de interfaces para definir tipos, mejorando la flexibilidad y mantenibilidad.</description>
+    </rule>
+
+    <!-- Reglas de rendimiento -->
+    <rule ref="rulesets/java/performance.xml/UseStringBufferForStringAppends">
+        <description>Promueve el uso de StringBuffer en concatenaciones para mejorar el rendimiento.</description>
+    </rule>
+    <rule ref="rulesets/java/performance.xml/AvoidInstantiatingObjectsInLoops">
+        <description>Evita la instanciación de objetos en bucles, lo que mejora la eficiencia.</description>
+    </rule>
+    <rule ref="rulesets/java/performance.xml/AvoidReassigningParameters">
+        <description>Evita la reasignación de parámetros dentro de métodos, promoviendo mejores prácticas de diseño y rendimiento.</description>
+    </rule>
+    <rule ref="rulesets/java/performance.xml/AvoidArrayLoops">
+        <description>Evita el uso de bucles para iterar sobre arrays, promoviendo el uso de métodos más eficientes.</description>
+    </rule>
+    <rule ref="rulesets/java/performance.xml/UseArrayListInsteadOfVector">
+        <description>Promueve el uso de ArrayList en lugar de Vector para mejorar el rendimiento.</description>
+    </rule>
+
+    <!-- Mejores prácticas -->
+    <rule ref="rulesets/java/bestpractices.xml/AvoidBranchingStatementAsLastInLoop">
+        <description>Evita declaraciones de bifurcación como la última instrucción en bucles, mejorando la legibilidad.</description>
+    </rule>
+    <rule ref="rulesets/java/bestpractices.xml/PositionLiteralsFirstInComparisons">
+        <description>Coloca los literales en primer lugar en las comparaciones, previniendo errores de null.</description>
+    </rule>
+    <rule ref="rulesets/java/bestpractices.xml/AvoidThrowingNullPointerException">
+        <description>Previene la generación explícita de NullPointerExceptions, favoreciendo un mejor manejo de errores.</description>
+    </rule>
+    <rule ref="rulesets/java/bestpractices.xml/AccessorClassGeneration">
+        <description>Evita la generación de clases con accesores innecesarios.</description>
+        <priority>0</priority>
+    </rule>
+    <rule ref="rulesets/java/bestpractices.xml/AvoidUsingVolatile">
+        <description>Evita el uso de la palabra clave volatile, promoviendo mejores prácticas de concurrencia.</description>
+        <priority>0</priority>
+    </rule>
+    <rule ref="rulesets/java/bestpractices.xml/UseUtilityClass">
+        <description>Promueve el uso de clases utilitarias para métodos estáticos, mejorando la organización del código.</description>
+    </rule>
+    <rule ref="rulesets/java/bestpractices.xml/LooseCoupling">
+        <description>Fomenta el acoplamiento débil entre clases, mejorando la flexibilidad y mantenibilidad.</description>
+    </rule>
+
+</ruleset>

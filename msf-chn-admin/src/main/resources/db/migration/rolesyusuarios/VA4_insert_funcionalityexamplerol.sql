@@ -1,0 +1,2 @@
+INSERT INTO role (name, description) SELECT 'Admin', 'Administrator with full access' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'Admin');
+INSERT INTO role_functionality (role_id, functionality_id) SELECT 1, id FROM functionality WHERE NOT EXISTS (SELECT 1 FROM role_functionality WHERE role_id = 1 AND functionality_id = id);

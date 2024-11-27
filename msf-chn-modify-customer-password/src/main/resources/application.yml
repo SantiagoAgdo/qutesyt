@@ -1,0 +1,50 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/msf-chn-modify-customer-passwordservice
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/bank?useMysqlMetadata=true&serverTimezone=America/Guayaquil&allowPublicKeyRetrieval=false}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:12qwaszx}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+  jackson:
+    time-zone: America/Guayaquil
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true # Para establecer un baseline en bases de datos ya existentes
+    clean-on-validation-error: false # No limpia la BD en caso de error de validación
+    placeholders:
+      schema_name: dbpruebagenerador # Definir placeholders personalizados si se necesita
+    validate-on-migrate: true # Valida las migraciones antes de aplicarlas
+
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+
+rsa:
+  private-key: 245234234234==
+
+token:
+  access-expires-in-min: 5
+  refresh-expires-in-min: 30
+
+csrf:
+  cookie:
+    domain: localhost
+    name: HKJHR64556
+
+api-director:
+  root: http://localhost:3000/api/
+  modifyCustomerPassword-path: v1/modifyCustomerPassword

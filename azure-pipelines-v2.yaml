@@ -1,0 +1,198 @@
+trigger:
+  branches:
+    include:
+      - 'main'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  serviceName: 'msf-chn-modify-customer-password'
+
+stages:
+
+  - stage: Microsoft_Security
+    displayName: "Microsoft Security DevOps"
+    jobs:
+      - job: Microsoft_Security
+        displayName: "Run SCA with Microsoft Security"
+        steps:
+          - task: MicrosoftSecurityDevOps@1
+            displayName: 'Security Analysis'
+            inputs:
+              policy: 'none'
+              tools: 'credscan, trivy, checkov, templateanalyzer, terrascan, eslint'
+              languages: 'java'
+              categories: 'secrets,code,artifacts,IaC,containers'
+              publish: true
+              artifactName: 'CodeAnalysisLogs'
+
+  - stage: Build
+    displayName: "Build Stage"
+    jobs:
+      - job: BuildJob
+        displayName: "Build Maven Project"
+        steps:
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: '21'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+
+          - task: Maven@4
+            inputs:
+              mavenPomFile: 'pom.xml'
+              mavenOptions: '-Xmx3072m'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: 'default'
+              jdkArchitectureOption: 'x64'
+              goals: 'clean install -Dmaven.test.skip=true'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.SourcesDirectory)/$(serviceName)/target/$(serviceName)-0.0.1-SNAPSHOT.jar'
+              ArtifactName: 'JAR'
+              publishLocation: 'Container'
+
+  - stage: Test
+    displayName: "Test Stage"
+    dependsOn: Build
+    jobs:
+      - job: TestJob
+        displayName: "Run Tests"
+        steps:
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: '21'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+
+          - task: Maven@4
+            inputs:
+              mavenPomFile: 'pom.xml'
+              mavenOptions: '-Xmx3072m'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: 'default'
+              jdkArchitectureOption: 'x64'
+              goals: 'clean test'
+
+  - stage: CodeAnalysis
+    displayName: "SonarCloud Code Analysis "
+    #TODO: CAMBIAR AGENTE PARA MICROBASE
+    pool:
+      name: 'windows-local'
+      demands:
+        - agent.name -equals LMOSQUERA
+    dependsOn: Test
+    jobs:
+      - job: AnalysisJob
+        displayName: "SonarCloud Code Analysis for opinnoBase "
+        steps:
+          - template: 'msf-chn-modify-customer-password/src/main/resources/sonarQube/sonarCloud.yml'
+
+  - stage: SecurityImageAnalysis
+    displayName: "Analysis Image with Prisma Cloud"
+    dependsOn: CodeAnalysis
+    jobs:
+      - job: ImageAnalysis
+        steps:
+          # - task: Bash@3
+          #   displayName: 'Download twistcli'
+          #   inputs:
+          #     targetType: 'inline'
+          #     script: |
+          #       curl -k -u $PRISMA_USER:$PRISMA_PASSWORD \
+          #       -o twistcli \
+          #       https://$PRISMA_CONSOLE/api/v1/util/twistcli
+
+          #       chmod +x twistcli
+
+          #       ./twistcli --version
+          #   env:
+          #     PRISMA_USER: $(prismaUser)
+          #     PRISMA_PASSWORD: $(prismaPassword)
+          #     PRISMA_CONSOLE: $(prismaConsole)
+
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'JAR'
+              downloadPath: '$(Build.SourcesDirectory)'
+
+          - task: Docker@2
+            inputs:
+              command: 'build'
+              Dockerfile: '**/Dockerfile'
+              repository: 'microservice'
+              tags: '$(Build.BuildNumber)'
+              buildContext: '.'
+
+         # - task: ECRPushImage@1
+         #   inputs:
+         #     awsCredentials: 'aws-connection'
+         #     regionName: 'us-east-1'
+         #     imageSource: 'imagename'
+         #     sourceImageName: 'microservice'
+         #     sourceImageTag: '$(Build.BuildNumber)'
+         #     repositoryName: 'ecr-banca'
+         #     pushTag: '$(Build.BuildNumber)'
+
+            # - task: Bash@3
+            #   displayName: 'Scan Docker Image'
+            #   inputs:
+            #     targetType: 'inline'
+            #     script: |
+            #       ./twistcli images scan \
+            #       --address https://$PRISMA_CONSOLE \
+            #       --user $PRISMA_USER \
+            #       --password $PRISMA_PASSWORD \
+            #       --details \
+            #       --output-file scan_result.json \
+            #       $(dockerImage)
+            #   env:
+            #     PRISMA_USER: $(prismaUser)
+            #     PRISMA_PASSWORD: $(prismaPassword)
+            #     PRISMA_CONSOLE: $(prismaConsole)
+            #     dockerImage: $(dockerImage)
+
+  - stage: Deploy
+    displayName: "Deploy microservices"
+    pool:
+      name: 'ubuntu-local'
+    dependsOn: SecurityImageAnalysis
+    jobs:
+      - job: DeployMicroservices
+        displayName: "Deploy for dinersbase"
+        steps:
+
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'JAR'
+              downloadPath: '$(Build.SourcesDirectory)'
+
+          - task: Bash@3
+            displayName: 'Replace Image Tag in Kubernetes Manifest'
+            inputs:
+              targetType: 'inline'
+              script: |
+                sed -i "s/image: msf-chn-modify-customer-passwordservice:latest/image: msf-chn-modify-customer-passwordservice:$(Build.BuildNumber)/" msf-chn-modify-customer-password/src/main/resources/k8s/Deployment-msf-chn-modify-customer-password.yaml
+
+          - task: Bash@3
+            displayName: 'Build Docker Images'
+            inputs:
+              targetType: 'inline'
+              script: |
+                docker build -f msf-chn-modify-customer-password/Dockerfile -t msf-chn-modify-customer-passwordservice:$(Build.BuildNumber) . 
+                minikube image load msf-chn-modify-customer-passwordservice:$(Build.BuildNumber)
+
+          - task: Bash@3
+            displayName: 'Apply manifests'
+            inputs:
+              targetType: 'inline'
+              script: kubectl apply -f msf-chn-modify-customer-password/src/main/resources/k8s/
+
+
+

@@ -1,0 +1,21 @@
+<settings>
+    <servers>
+        <server>
+            <id>opinno-group-maven</id>
+            <username>opinno</username>
+            <password>opinno</password>
+        </server>
+        <server>
+            <id>spring-releases</id>
+            <username/>
+            <password/>
+        </server>
+    </servers>
+    <mirrors>
+        <mirror>
+            <id>opinno-group-maven</id>
+            <url>https://nexus.staging-otb.com/repository/opinno-group-maven/</url>
+            <mirrorOf>*</mirrorOf>
+        </mirror>
+    </mirrors>
+</settings>

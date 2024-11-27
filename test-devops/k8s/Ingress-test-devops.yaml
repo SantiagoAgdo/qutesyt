@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: test-devopsservice-routes
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - main-gateway
+  http:
+    - match:
+        - uri:
+            prefix: "/api/test-devopsservice/"
+      rewrite:
+        uri: "/"
+      route:
+        - destination:
+            host: test-devopsservice.default.svc.cluster.local
+            port:
+              number: 8080
+      timeout: 4s
+    - match:
+        - uri:
+            prefix: "/api/gateway"
+      route:
+        - destination:
+            host: test-devopsservice.default.svc.cluster.local
+            port:
+              number: 8080
+    - route:
+        - destination:
+            host: test-devopsservice.default.svc.cluster.local
+            port:
+              number: 8080

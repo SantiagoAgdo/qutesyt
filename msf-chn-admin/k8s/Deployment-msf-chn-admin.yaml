@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: msf-chn-adminservice-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: msf-chn-adminservice
+  template:
+    metadata:
+      labels:
+        app: msf-chn-adminservice
+        deployment: msf-chn-adminservice-v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: msf-chn-adminservice-sa
+      containers:
+        - name: msf-chn-adminservice
+          image: 345594594011.dkr.ecr.us-east-1.amazonaws.com/repository-dev-diners:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 10"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql-db-dev.chywm8sg4bl0.us-east-1.rds.amazonaws.com:3306/dbbancadev
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password

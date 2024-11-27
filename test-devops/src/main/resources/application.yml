@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+  jackson:
+    time-zone: America/Guayaquil
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true # Para establecer un baseline en bases de datos ya existentes
+    clean-on-validation-error: false # No limpia la BD en caso de error de validación
+    placeholders:
+      schema_name: dbpruebagenerador # Definir placeholders personalizados si se necesita
+    validate-on-migrate: true # Valida las migraciones antes de aplicarlas
+
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+
+rsa:
+  private-key: 245234234234==
+
+token:
+  access-expires-in-min: 5
+  refresh-expires-in-min: 30
+
+csrf:
+  cookie:
+    domain: localhost
+    name: HKJHR64556

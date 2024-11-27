@@ -1,0 +1,160 @@
+trigger:
+  branches:
+    include:
+      - 'master'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: 'credentials-backend'
+  - name: serviceName
+    value: 'msf-chn-admin'
+
+stages:
+
+  # - stage: Snyk_Security
+  #   displayName: "Snyk Security DevOps"
+  #   jobs:
+  #     - job: Snyk_Security_Analysis
+  #       displayName: "Snyk Security Analysis"
+  #       steps:
+  #         - task: SnykSecurityScan@1
+  #           inputs:
+  #             serviceConnectionEndpoint: 'Snyk_Service_Connection'
+  #             testType: 'app'
+  #             monitorWhen: 'always'
+  #             failOnIssues: false
+  #             projectName: '$(serviceName)-application'
+  #             testDirectory: '$(Build.SourcesDirectory)/$(serviceName)'
+
+  - stage: Build
+    displayName: "Build Stage"
+    jobs:
+      - job: BuildJob
+        displayName: "Build Maven Project"
+        steps:
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: '21'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+
+          - task: Maven@4
+            inputs:
+              mavenPomFile: '$(serviceName)/pom.xml'
+              mavenOptions: '-Xmx3072m'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: 'default'
+              jdkArchitectureOption: 'x64'
+              goals: 'clean install -Dmaven.test.skip=true'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.SourcesDirectory)/$(serviceName)/target/$(serviceName)-0.0.1-SNAPSHOT.jar'
+              ArtifactName: 'JAR'
+              publishLocation: 'Container'
+
+  # - stage: Test
+  #   displayName: "Test Stage"
+  #   dependsOn: Build
+  #   jobs:
+  #     - job: TestJob
+  #       displayName: "Run Tests"
+  #       steps:
+  #         - task: JavaToolInstaller@0
+  #           inputs:
+  #             versionSpec: '21'
+  #             jdkArchitectureOption: 'x64'
+  #             jdkSourceOption: 'PreInstalled'
+
+  #         - task: Maven@4
+  #           inputs:
+  #             mavenPomFile: 'pom.xml'
+  #             mavenOptions: '-Xmx3072m'
+  #             javaHomeOption: 'JDKVersion'
+  #             jdkVersionOption: 'default'
+  #             jdkArchitectureOption: 'x64'
+  #             goals: 'clean test'
+
+  - stage: CodeAnalysis
+    displayName: "SonarCloud Code Analysis "
+    jobs:
+      - job: AnalysisJob
+        displayName: "SonarCloud Code Analysis for diners "
+        steps:
+          - checkout: self
+            fetchDepth: 0
+          - template: 'src/main/resources/sonarQube/sonarCloud.yml'
+
+  - stage: SecurityImageAnalysis
+    displayName: "Analysis Image with Snyk"
+    jobs:
+      - job: ImageAnalysis
+        steps:
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'JAR'
+              downloadPath: '$(Build.SourcesDirectory)'
+
+          - task: Docker@2
+            inputs:
+              command: 'build'
+              Dockerfile: '**/Dockerfile'
+              repository: 'msf-chn-adminservice'
+              tags: '$(Build.BuildNumber)'
+              buildContext: '.'
+
+          - task: SnykSecurityScan@1
+            inputs:
+              serviceConnectionEndpoint: 'Snyk_Service_Connection'
+              testType: 'container'
+              dockerImageName: 'msf-chn-adminservice:$(Build.BuildNumber)'
+              severityThreshold: 'medium'
+              failOnThreshold: 'medium'
+              failOnIssues: false
+              monitorWhen: 'always'
+              projectName: '$(serviceName)-container'
+              additionalArguments: '--file=$(Build.SourcesDirectory)/$(serviceName)/Dockerfile'           
+
+          - task: ECRPushImage@1
+            inputs:
+              awsCredentials: 'aws-connection'
+              regionName: 'us-east-1'
+              imageSource: 'imagename'
+              sourceImageName: 'msf-chn-adminservice'
+              sourceImageTag: '$(Build.BuildNumber)'
+              repositoryName: 'repository-dev-diners'
+              pushTag: '$(Build.BuildNumber)'
+          
+  - stage: Deploy
+    displayName: "Deploy microservices"
+    jobs:
+      - job: DeployMicroservices
+        displayName: "Deploy for dinersbase"
+        steps:
+
+          - task: Bash@3
+            displayName: 'AWS Authenticate'
+            inputs:
+              targetType: 'inline'
+              script: |
+                aws configure set aws_access_key_id $(AWS_ACCESS_KEY)
+                aws configure set aws_secret_access_key $(AWS_SECRET_KEY)
+                aws eks update-kubeconfig --region us-east-1 --name eks-cluster-banca-diners
+                kubectl version
+
+          - task: Bash@3
+            displayName: 'Replace Image Tag in Kubernetes Manifest'
+            inputs:
+              targetType: 'inline'
+              script: |
+                sed -i "s|image: 345594594011.dkr.ecr.us-east-1.amazonaws.com/repository-dev-diners:latest|image: 345594594011.dkr.ecr.us-east-1.amazonaws.com/repository-dev-diners:$(Build.BuildNumber)|" msf-chn-admin/k8s/Deployment-msf-chn-admin.yaml
+
+          - task: Bash@3
+            displayName: 'Apply manifests'
+            inputs:
+              targetType: 'inline'
+              script: kubectl apply -f msf-chn-admin/k8s/

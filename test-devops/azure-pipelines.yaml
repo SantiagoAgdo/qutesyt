@@ -1,0 +1,182 @@
+trigger:
+  branches:
+    include:
+      - 'master'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: 'credentials-backend'
+  - name: serviceName
+    value: 'test-devops'
+  - name: ANALYSIS_PATH
+    value: '$(Build.SourcesDirectory)/test-devops'
+
+stages:
+
+ - stage:  Snyk_Security
+   displayName: "Snyk Security"
+   jobs:
+     - job: Microsoft_Security
+       displayName: "Run SCA with Microsoft Security"
+       steps:
+
+        - task: UseNode@1
+          inputs:
+            versionSpec: '16.x'
+            addToPath: true
+
+        - script: |
+            npm install -g snyk
+            npm install snyk-to-html -g
+          displayName: 'Install Snyk CLI'
+        
+        # Paso 2: Autenticar con Snyk
+        - script: |
+            snyk auth $(SNYK_TOKEN_TEMP)
+          displayName: 'Autenticar con Snyk'
+        
+        # Paso 3: Análisis SAST con Snyk Code
+        - script: |
+            snyk code test $(ANALYSIS_PATH) --severity-threshold=low --json-file-output=snyk_code_report.json --report; exit 0
+            snyk-to-html -i snyk_code_report.json -o results-code.html
+          displayName: 'Ejecutar análisis SAST con Snyk Code'
+        
+        # Paso 4: Análisis SCA con Snyk Open Source
+        - script: |
+            snyk test $(ANALYSIS_PATH) --severity-threshold=medium --json-file-output=snyk_sca_report.json --report; exit 0
+            snyk-to-html -i snyk_sca_report.json -o results-sca.html
+          displayName: 'Ejecutar análisis SCA con Snyk Open Source'
+        
+        # Paso 5: Enviar resultados a Snyk para monitorización continua
+        - script: |
+            snyk monitor --project-name='$(Build.Repository.Name)-$(serviceName)' --remote-repo-url='$(Build.Repository.Uri)'
+          displayName: 'Enviar datos a Snyk para monitorización continua'
+
+
+#  - stage: Build
+#    displayName: "Build Stage"
+#    jobs:
+#      - job: BuildJob
+#        displayName: "Build Maven Project"
+#        steps:
+#          - task: JavaToolInstaller@0
+#            inputs:
+#              versionSpec: '21'
+#              jdkArchitectureOption: 'x64'
+#              jdkSourceOption: 'PreInstalled'
+
+#          - task: Maven@4
+#            inputs:
+#              mavenPomFile: '$(serviceName)/pom.xml'
+#              mavenOptions: '-Xmx3072m'
+#              javaHomeOption: 'JDKVersion'
+#              jdkVersionOption: 'default'
+#              jdkArchitectureOption: 'x64'
+#              goals: 'clean install -Dmaven.test.skip=true'
+
+#          - task: PublishBuildArtifacts@1
+#            inputs:
+#              PathtoPublish: '$(Build.SourcesDirectory)/$(serviceName)/target/$(serviceName)-0.0.1-SNAPSHOT.jar'
+#              ArtifactName: 'JAR'
+#              publishLocation: 'Container'
+
+  #- stage: Test
+  #  displayName: "Test Stage"
+  #  dependsOn: Build
+  #  jobs:
+  #      - job: TestJob
+  #        displayName: "Run Tests"
+  #        steps:
+  #          - task: JavaToolInstaller@0
+  #            inputs:
+  #              versionSpec: '21'
+  #              jdkArchitectureOption: 'x64'
+  #              jdkSourceOption: 'PreInstalled'
+  #
+  #          - task: Maven@4
+  #            inputs:
+  #              mavenPomFile: 'pom.xml'
+  #              mavenOptions: '-Xmx3072m'
+  #              javaHomeOption: 'JDKVersion'
+  #              jdkVersionOption: 'default'
+  #              jdkArchitectureOption: 'x64'
+  #              goals: 'clean test'
+
+#  - stage: CodeAnalysis
+#    displayName: "SonarCloud Code Analysis "
+#    # dependsOn: Test
+#    jobs:
+#      - job: AnalysisJob
+#        displayName: "SonarCloud Code Analysis for diners "
+#        steps:
+#          - checkout: self
+#            fetchDepth: 0
+#          - template: 'src/main/resources/sonarQube/sonarCloud.yml'
+
+#  - stage: SecurityImageAnalysis
+#    displayName: "Analysis Image with Snyk"
+#    jobs:
+#    - job: ImageAnalysis
+#      steps:
+#         - task: DownloadBuildArtifacts@1
+#           inputs:
+#             buildType: 'current'
+#             downloadType: 'single'
+#             artifactName: 'JAR'
+#             downloadPath: '$(Build.SourcesDirectory)'
+
+#         - task: Docker@2
+#           inputs:
+#             command: 'build'
+#             Dockerfile: '$(Build.SourcesDirectory)/$(serviceName)/Dockerfile'
+#             repository: 'microservice'
+#             tags: '$(Build.BuildNumber)'
+#             buildContext: '.'
+
+#         - task: SnykSecurityScan@1  
+#           inputs:
+#             serviceConnectionEndpoint: 'Snyk_Service_Connection'
+#             testType: 'container'
+#             dockerImageName: 'microservice:$(Build.BuildNumber)'
+#             severityThreshold: 'medium'
+#             failOnThreshold: 'medium'
+#             failOnIssues: true
+#             monitorWhen: 'always'
+#             projectName: 'test-devops-container'
+#             additionalArguments: '--file=$(Build.SourcesDirectory)/$(serviceName)/Dockerfile'
+
+
+  #- stage: Deploy
+  #  displayName: "Deploy microservices"
+  #  dependsOn: SecurityImageAnalysis
+  #  jobs:
+#      - job: DeployMicroservices
+#        displayName: "Deploy for dinersbase"
+#        steps:
+#          - task: Bash@3
+#            displayName: 'AWS Authenticate'
+#            inputs:
+#              targetType: 'inline'
+#              script: |
+#                aws configure set aws_access_key_id $(AWS_ACCESS_KEY)
+#                aws configure set aws_secret_access_key $(AWS_SECRET_KEY)
+#                aws eks update-kubeconfig --region us-east-1 --name eks-cluster-banca-diners
+#                kubectl version
+#
+#          - task: Bash@3
+#            displayName: 'Replace Image Tag in Kubernetes Manifest'
+#            inputs:
+#              targetType: 'inline'
+#              script: |
+#                sed -i "s/image: test-devopsservice:latest/image: test-devopsservice:$(Build.BuildNumber)/" test-devops/src/main/resources/k8s/Deployment-test-devops.yaml
+#
+#          - task: Bash@3
+#            displayName: 'Apply manifests'
+#            inputs:
+#              targetType: 'inline'
+#              script: kubectl apply -f test-devops/src/main/resources/k8s/
+
+
+
